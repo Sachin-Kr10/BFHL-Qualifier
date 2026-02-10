@@ -1,8 +1,8 @@
 const axios = require("axios");
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-pro";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 const extractSingleWord = (text) => {
   if (!text || typeof text !== "string") return "N/A";
@@ -10,28 +10,32 @@ const extractSingleWord = (text) => {
 };
 
 const askAI = async (question) => {
-  if (!GEMINI_API_KEY) {
-    throw new Error("AI configuration missing");
-  }
+  try {
+    const response = await axios.post(
+      GEMINI_URL,
+      {
+        contents: [{ parts: [{ text: question }] }]
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-goog-api-key": GEMINI_API_KEY
+        },
+        timeout: 10000
+      }
+    );
 
-  const response = await axios.post(
-    `${GEMINI_URL}?key=${GEMINI_API_KEY}`,
-    {
-      contents: [
-        {
-          parts: [{ text: question }]
-        }
-      ]
-    },
-    {
-      timeout: 10000
+    const aiText =
+      response?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    return extractSingleWord(aiText);
+
+  } catch (err) {
+    if (err.response?.status === 429) {
+      throw new Error("AI_RATE_LIMIT");
     }
-  );
-
-  const aiText =
-    response?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  return extractSingleWord(aiText);
+    throw new Error("AI_FAILED");
+  }
 };
 
 module.exports = { askAI };

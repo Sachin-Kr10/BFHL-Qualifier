@@ -1,5 +1,5 @@
-const { fibonacci, isPrime, hcf, lcm } = require("../utils/math.utils");
-const { askAI } = require("../utils/ai.utils");
+const { fibonacci, isPrime, hcf, lcm } = require("../utils/math.util");
+const { askAI } = require("../utils/ai.util");
 
 const OFFICIAL_EMAIL = process.env.OFFICIAL_EMAIL;
 
@@ -7,7 +7,7 @@ const successResponse = (res, data) => {
   return res.status(200).json({
     is_success: true,
     official_email: OFFICIAL_EMAIL,
-    data
+    data,
   });
 };
 
@@ -15,7 +15,7 @@ const errorResponse = (res, status, message) => {
   return res.status(status).json({
     is_success: false,
     official_email: OFFICIAL_EMAIL,
-    error: message
+    error: message,
   });
 };
 
@@ -52,9 +52,7 @@ const bfhlHandler = async (req, res) => {
         if (!Array.isArray(value)) {
           return errorResponse(res, 400, "Prime input must be an array");
         }
-        data = value.filter(
-          (num) => Number.isInteger(num) && isPrime(num)
-        );
+        data = value.filter((num) => Number.isInteger(num) && isPrime(num));
         break;
 
       case "lcm":
@@ -72,10 +70,23 @@ const bfhlHandler = async (req, res) => {
         break;
 
       case "AI":
-        if (typeof value !== "string" || value.trim().length === 0) {
-          return errorResponse(res, 400, "AI input must be a string");
+        try {
+          data = await askAI(value);
+        } catch (err) {
+          if (err.message === "AI_RATE_LIMIT") {
+            return res.status(429).json({
+              is_success: false,
+              official_email: OFFICIAL_EMAIL,
+              error: "AI rate limit exceeded. Try again later.",
+            });
+          }
+
+          return res.status(500).json({
+            is_success: false,
+            official_email: OFFICIAL_EMAIL,
+            error: "AI service unavailable",
+          });
         }
-        data = await askAI(value);
         break;
 
       default:
@@ -83,7 +94,6 @@ const bfhlHandler = async (req, res) => {
     }
 
     return successResponse(res, data);
-
   } catch (err) {
     return errorResponse(res, 500, "Internal server error");
   }
@@ -93,13 +103,13 @@ const healthCheck = (req, res) => {
   if (!OFFICIAL_EMAIL) {
     return res.status(500).json({
       is_success: false,
-      error: "Server misconfiguration"
+      error: "Server misconfiguration",
     });
   }
 
   return res.status(200).json({
     is_success: true,
-    official_email: OFFICIAL_EMAIL
+    official_email: OFFICIAL_EMAIL,
   });
 };
 

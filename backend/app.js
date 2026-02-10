@@ -1,14 +1,19 @@
 const express = require("express");
 const cors = require("cors");
-const helmet = require("helmet");
 
 const bfhlRoutes = require("./routes/bfhl.routes");
 
 const app = express();
 
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"]
+  })
+);
+
+app.use(express.json({ limit: "10kb" }));
 
 app.use("/", bfhlRoutes);
 
